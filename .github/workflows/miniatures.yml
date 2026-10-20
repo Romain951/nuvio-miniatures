@@ -17,12 +17,42 @@ on:
   push:
     paths:
       - ".github/workflows/miniatures.yml"
+  # Chaque jour : fabrique la version avec miniatures seulement si une
+  # nouvelle version officielle est sortie depuis la derniere fabrication.
+  schedule:
+    - cron: "17 6 * * *"
 
 permissions:
   contents: write
 
 jobs:
+  verifier:
+    runs-on: ubuntu-24.04
+    outputs:
+      fabriquer: ${{ steps.c.outputs.fabriquer }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AMONT: iqui27/nuvio-native-legacy
+    steps:
+      - name: Nouvelle version officielle ?
+        id: c
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != schedule ]; then
+            echo "fabriquer=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          V=$(gh release view -R "$AMONT" --json tagName -q .tagName)
+          if gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' | grep -q "^miniatures-$V-"; then
+            echo "Deja fabrique pour $V : rien a faire."
+            echo "fabriquer=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nouvelle version officielle : $V"
+            echo "fabriquer=true" >> "$GITHUB_OUTPUT"
+          fi
+
   apk:
+    needs: verifier
+    if: needs.verifier.outputs.fabriquer == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
