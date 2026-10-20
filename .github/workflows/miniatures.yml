@@ -628,8 +628,9 @@ jobs:
           else
             "$BT/zipalign" -f -p 4 reconstruit.apk aligne.apk
           fi
-          "$BT/apksigner" sign --ks cle/cle.p12 --ks-pass file:cle/passe.txt --ks-key-alias nocturne \
-            --key-pass file:cle/passe.txt --out Nuvio-Legacy-miniatures.apk aligne.apk
+          export PASSE_CLE="$(cat cle/passe.txt)"
+          "$BT/apksigner" sign --ks cle/cle.p12 --ks-pass env:PASSE_CLE --ks-key-alias nocturne \
+            --key-pass env:PASSE_CLE --out Nuvio-Legacy-miniatures.apk aligne.apk
           "$BT/apksigner" verify Nuvio-Legacy-miniatures.apk
           ls -la Nuvio-Legacy-miniatures.apk
 
